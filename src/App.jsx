@@ -1,5 +1,6 @@
   import React, { useState, useEffect } from 'react';
   import { Shield, Clock, Monitor, RefreshCcw, AlertCircle } from 'lucide-react';
+  const API_URL = import.meta.env.VITE_API_BASE_URL;
 
   const ActivityDashboard = () => {
     const [logs, setLogs] = useState([]);
@@ -9,7 +10,7 @@
     const fetchLogs = async () => {
       setIsRefreshing(true);
       try {
-        const response = await fetch('https://moniter-rj.onrender.com/api/logs');
+        const response = await fetch(`${API_URL}/api/logs`);
         const data = await response.json();
         setLogs(data);
       } catch (err) {
