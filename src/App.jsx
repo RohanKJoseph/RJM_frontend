@@ -9,6 +9,7 @@ import {
   Maximize2,
   X,
   Camera,
+  Trash2,
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -17,6 +18,97 @@ const ActivityDashboard = () => {
   const [logs, setLogs] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
+ 
+const deleteLog = async (logId) => {
+  if (!logId) {
+    console.error("Delete failed: missing log ID");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Delete this activity and its screenshot?\n\nThis cannot be undone."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  console.log("Deleting activity:", logId);
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/logs/${logId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    console.log(
+      "Delete response status:",
+      response.status
+    );
+
+    // Get response as text first so we can see
+    // exactly what the backend returned.
+    const responseText = await response.text();
+
+    console.log(
+      "Delete response:",
+      responseText
+    );
+
+    let result = {};
+
+    try {
+      result = responseText
+        ? JSON.parse(responseText)
+        : {};
+    } catch {
+      result = {
+        error: responseText,
+      };
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        `Server returned HTTP ${response.status}`
+      );
+    }
+
+    console.log(
+      "Activity deleted successfully:",
+      logId
+    );
+
+    // Remove from UI immediately
+    setLogs((currentLogs) =>
+      currentLogs.filter(
+        (log) => String(log._id) !== String(logId)
+      )
+    );
+
+    // Close screenshot viewer if necessary
+    if (
+      selectedScreenshot &&
+      String(selectedScreenshot.logId) === String(logId)
+    ) {
+      setSelectedScreenshot(null);
+    }
+
+  } catch (err) {
+
+    console.error(
+      "Delete failed:",
+      err
+    );
+
+    alert(
+      `Delete failed: ${err.message || "Unknown error"}`
+    );
+  }
+};
+ 
 
   // --------------------------------------------------
   // Fetch activity logs
@@ -254,23 +346,38 @@ const ActivityDashboard = () => {
 
                     {/* Screenshot overlay */}
 
-                    <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+
+                      {screenshotUrl && (
+                        <button
+                          onClick={() =>
+                            setSelectedScreenshot({
+                              logId: log._id,
+                              url: screenshotUrl,
+                              title: log.window_title,
+                              timestamp: log.timestamp,
+                              isIncognito: log.is_incognito,
+                            })
+                          }
+                          className="flex items-center gap-1.5 bg-black/60 hover:bg-black/75 backdrop-blur-sm text-white px-3 py-2 rounded-lg transition"
+                        >
+                          <Maximize2 size={14} />
+
+                          <span className="text-[11px] font-semibold">
+                            View
+                          </span>
+                        </button>
+                      )}
 
                       <button
-                        onClick={() =>
-                          setSelectedScreenshot({
-                            url: screenshotUrl,
-                            title: log.window_title,
-                            timestamp: log.timestamp,
-                            isIncognito: log.is_incognito,
-                          })
-                        }
-                        className="flex items-center gap-1.5 bg-black/60 hover:bg-black/75 backdrop-blur-sm text-white px-3 py-2 rounded-lg transition"
+                        onClick={() => deleteLog(log._id)}
+                        title="Delete activity"
+                        className="flex items-center gap-1.5 bg-red-600/90 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition"
                       >
-                        <Maximize2 size={14} />
+                        <Trash2 size={14} />
 
                         <span className="text-[11px] font-semibold">
-                          View
+                          Delete
                         </span>
                       </button>
 
